@@ -241,12 +241,14 @@ module.exports = async (req, res) => {
     'http://localhost:8080',
     'https://solonchain.netlify.app',
     'https://solana-mcp-dashboard.netlify.app',
-    'https://solana-mcp-dashboard.vercel.app'
+    'https://solana-mcp-dashboard.vercel.app',
+    'https://solanadash.vercel.app'
   ];
   
   const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin) || origin?.includes('netlify.app') || origin?.includes('vercel.app')) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
+  // Allow all origins for development, or specific ones for production
+  if (allowedOrigins.includes(origin) || origin?.includes('netlify.app') || origin?.includes('vercel.app') || !origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
   }
   
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
