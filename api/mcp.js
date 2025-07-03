@@ -1,16 +1,14 @@
 const { Connection, PublicKey, Keypair } = require('@solana/web3.js');
 const { AnchorProvider } = require('@coral-xyz/anchor');
-const http = require('http');
-const url = require('url');
 
 // Configuration for Solana devnet connection
 const DEVNET_RPC_URL = process.env.RPC_URL || 'https://api.devnet.solana.com';
 const connection = new Connection(DEVNET_RPC_URL, 'confirmed');
 
-// Create a new keypair for the provider (in production, you'd use a real wallet)
+// Create a new keypair for the provider
 const wallet = Keypair.generate();
 
-// Set up Anchor provider for interacting with Solana programs
+// Set up Anchor provider
 const provider = new AnchorProvider(
   connection,
   {
@@ -234,9 +232,9 @@ server.registerTool('get_network_info', {
   }
 });
 
-// Create HTTP server
-const httpServer = http.createServer(async (req, res) => {
-  // Set CORS headers for production deployment
+// Vercel API handler
+module.exports = async (req, res) => {
+  // Set CORS headers
   const allowedOrigins = [
     'http://localhost:3000',
     'http://localhost:3001',
@@ -255,110 +253,59 @@ const httpServer = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Access-Control-Max-Age', '86400');
 
+  // Handle preflight requests
   if (req.method === 'OPTIONS') {
-    res.writeHead(200);
-    res.end();
+    res.status(200).end();
     return;
   }
 
+  // Handle POST requests (MCP protocol)
   if (req.method === 'POST') {
-    let body = '';
-    req.on('data', chunk => {
-      body += chunk.toString();
-    });
+    try {
+      const request = JSON.parse(req.body);
+      const response = await server.handleRequest(request);
+      
+      res.status(200).json(response);
+    } catch (error) {
+      res.status(400).json({
+        jsonrpc: '2.0',
+        error: {
+          code: -32700,
+          message: 'Parse error'
+        }
+      });
+    }
+    return;
+  }
 
-    req.on('end', async () => {
-      try {
-        const request = JSON.parse(body);
-        const response = await server.handleRequest(request);
-        
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(response));
-      } catch (error) {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-          jsonrpc: '2.0',
-          error: {
-            code: -32700,
-            message: 'Parse error'
-          }
-        }));
-      }
-    });
-  } else if (req.method === 'GET') {
+  // Handle GET requests (info and health check)
+  if (req.method === 'GET') {
     // Health check endpoint
-    if (req.url === '/health') {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ 
+    if (req.url.includes('/health')) {
+      res.status(200).json({ 
         status: 'healthy', 
         timestamp: new Date().toISOString(),
         network: 'devnet',
         rpcUrl: DEVNET_RPC_URL
-      }));
+      });
       return;
     }
     
     // Root endpoint with info
-    if (req.url === '/') {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({
-        name: 'Solana MCP Server',
-        version: '1.0.0',
-        description: 'Solana MCP server for blockchain interactions',
-        endpoints: {
-          health: '/health',
-          mcp: 'POST / (JSON-RPC)'
-        },
-        network: 'devnet',
-        rpcUrl: DEVNET_RPC_URL
-      }));
-      return;
-    }
-    
-    res.writeHead(404, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Not found' }));
-  } else {
-    res.writeHead(405, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: 'Method not allowed' }));
-  }
-});
-
-// Start the server only if not in Vercel
-if (!process.env.VERCEL) {
-  const PORT = process.env.PORT || 3000;
-  
-  httpServer.listen(PORT, () => {
-    console.log(`🚀 Solana MCP Server running on port ${PORT}`);
-    console.log(`📡 Connected to Solana devnet: ${DEVNET_RPC_URL}`);
-    console.log(`🔑 Provider wallet: ${wallet.publicKey.toString()}`);
-    
-    // Get and display provider balance
-    connection.getBalance(wallet.publicKey)
-      .then(balance => {
-        console.log(`💰 Provider balance: ${balance / 1e9} SOL`);
-      })
-      .catch(() => {
-        console.log(`💰 Provider balance: Unknown`);
-      });
-    
-    console.log('\n📋 Available tools:');
-    console.log('  - get_balance: Get account balance');
-    console.log('  - get_account_info: Get account information');
-    console.log('  - get_recent_blockhash: Get latest blockhash');
-    console.log('  - get_slot: Get current slot number');
-    console.log('  - get_network_info: Get network information');
-    console.log('\n🔗 MCP Endpoint: http://localhost:' + PORT);
-    console.log('📝 To connect to Cursor MCP, use the HTTP endpoint above');
-  });
-
-  // Handle graceful shutdown
-  process.on('SIGINT', () => {
-    console.log('\n🛑 Shutting down Solana MCP Server...');
-    httpServer.close(() => {
-      console.log('✅ Server closed successfully');
-      process.exit(0);
+    res.status(200).json({
+      name: 'Solana MCP Server',
+      version: '1.0.0',
+      description: 'Solana MCP server for blockchain interactions',
+      endpoints: {
+        health: '/api/mcp/health',
+        mcp: 'POST /api/mcp (JSON-RPC)'
+      },
+      network: 'devnet',
+      rpcUrl: DEVNET_RPC_URL
     });
-  });
-}
+    return;
+  }
 
-module.exports = { server, connection, provider, httpServer }; 
+  // Method not allowed
+  res.status(405).json({ error: 'Method not allowed' });
+}; 

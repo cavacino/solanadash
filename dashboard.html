@@ -384,7 +384,11 @@
 
         async function callMCPServer(method, params = {}) {
             try {
-                const response = await fetch(MCP_SERVER_URL, {
+                // Determine if this is a Vercel deployment (has /api/mcp endpoint)
+                const isVercel = MCP_SERVER_URL.includes('vercel.app');
+                const endpoint = isVercel ? '/api/mcp' : '';
+                
+                const response = await fetch(MCP_SERVER_URL + endpoint, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
