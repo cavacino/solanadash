@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solana MCP Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-icon {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #666;
+        }
+
+        .info-value {
+            font-weight: 500;
+            color: #333;
+            text-align: right;
+            word-break: break-all;
+        }
+
+        .balance-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .slot-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #764ba2;
+        }
+
+        .status {
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #dc3545;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: transform 0.2s ease;
+            margin-bottom: 20px;
+        }
+
+        .refresh-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .refresh-btn:active {
+            transform: scale(0.95);
+        }
+
+        .address-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            margin-bottom: 15px;
+            transition: border-color 0.3s ease;
+        }
+
+        .address-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .query-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: background 0.3s ease;
+        }
+
+        .query-btn:hover {
+            background: #5a6fd8;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Solana MCP Dashboard</h1>
+            <p>Real-time Solana network information and account data</p>
+        </div>
+
+        <button class="refresh-btn" onclick="refreshAllData()">🔄 Refresh All Data</button>
+
+        <div id="error-container"></div>
+
+        <div class="dashboard">
+            <!-- Network Information -->
+            <div class="card">
+                <h3>
+                    <span class="card-icon">🌐</span>
+                    Network Information
+                </h3>
+                <div id="network-info">
+                    <div class="loading">Loading network information...</div>
+                </div>
+            </div>
+
+            <!-- Current Slot -->
+            <div class="card">
+                <h3>
+                    <span class="card-icon">📊</span>
+                    Current Slot
+                </h3>
+                <div id="slot-info">
+                    <div class="loading">Loading slot information...</div>
+                </div>
+            </div>
+
+            <!-- Recent Blockhash -->
+            <div class="card">
+                <h3>
+                    <span class="card-icon">🔗</span>
+                    Recent Blockhash
+                </h3>
+                <div id="blockhash-info">
+                    <div class="loading">Loading blockhash...</div>
+                </div>
+            </div>
+
+            <!-- Account Balance -->
+            <div class="card">
+                <h3>
+                    <span class="card-icon">💰</span>
+                    Account Balance
+                </h3>
+                <input type="text" id="balance-address" class="address-input" 
+                       placeholder="Enter Solana address (e.g., NnLD2oQcRM9MAe8sdaxCLquA5UtqAaXgkpCRmadwgg3)">
+                <button class="query-btn" onclick="getBalance()">Get Balance</button>
+                <div id="balance-info">
+                    <div class="loading">Enter an address to check balance</div>
+                </div>
+            </div>
+
+            <!-- Account Information -->
+            <div class="card">
+                <h3>
+                    <span class="card-icon">👤</span>
+                    Account Information
+                </h3>
+                <input type="text" id="account-address" class="address-input" 
+                       placeholder="Enter Solana address">
+                <button class="query-btn" onclick="getAccountInfo()">Get Account Info</button>
+                <div id="account-info">
+                    <div class="loading">Enter an address to get account info</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const MCP_SERVER_URL = 'http://localhost:3000';
+        let requestId = 1;
+
+        function showError(message) {
+            const errorContainer = document.getElementById('error-container');
+            errorContainer.innerHTML = `<div class="error">❌ ${message}</div>`;
+            setTimeout(() => {
+                errorContainer.innerHTML = '';
+            }, 5000);
+        }
+
+        async function callMCPServer(method, params = {}) {
+            try {
+                const response = await fetch(MCP_SERVER_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        id: requestId++,
+                        method: method,
+                        params: params
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error.message);
+                }
+
+                return data.result;
+            } catch (error) {
+                console.error('MCP Server error:', error);
+                throw error;
+            }
+        }
+
+        async function getNetworkInfo() {
+            try {
+                const result = await callMCPServer('tools/call', {
+                    name: 'get_network_info',
+                    arguments: {}
+                });
+
+                const content = JSON.parse(result.content[0].text);
+                const container = document.getElementById('network-info');
+                
+                container.innerHTML = `
+                    <div class="info-item">
+                        <span class="info-label">Network:</span>
+                        <span class="info-value">${content.network}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">RPC URL:</span>
+                        <span class="info-value">${content.rpcUrl}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Current Slot:</span>
+                        <span class="info-value slot-value">${content.currentSlot.toLocaleString()}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Latest Blockhash:</span>
+                        <span class="info-value">${content.latestBlockhash.substring(0, 20)}...</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Version:</span>
+                        <span class="info-value">${content.version['solana-core']}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Provider Wallet:</span>
+                        <span class="info-value">${content.providerWallet.substring(0, 20)}...</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Timestamp:</span>
+                        <span class="info-value">${new Date(content.timestamp).toLocaleString()}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Status:</span>
+                        <span class="status connected">Connected</span>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('network-info').innerHTML = `
+                    <div class="status error">Error: ${error.message}</div>
+                `;
+                showError(`Failed to get network info: ${error.message}`);
+            }
+        }
+
+        async function getSlotInfo() {
+            try {
+                const result = await callMCPServer('tools/call', {
+                    name: 'get_slot',
+                    arguments: {}
+                });
+
+                const content = JSON.parse(result.content[0].text);
+                const container = document.getElementById('slot-info');
+                
+                container.innerHTML = `
+                    <div class="info-item">
+                        <span class="info-label">Current Slot:</span>
+                        <span class="info-value slot-value">${content.slot.toLocaleString()}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Timestamp:</span>
+                        <span class="info-value">${new Date(content.timestamp).toLocaleString()}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Status:</span>
+                        <span class="status connected">Live</span>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('slot-info').innerHTML = `
+                    <div class="status error">Error: ${error.message}</div>
+                `;
+                showError(`Failed to get slot info: ${error.message}`);
+            }
+        }
+
+        async function getBlockhashInfo() {
+            try {
+                const result = await callMCPServer('tools/call', {
+                    name: 'get_recent_blockhash',
+                    arguments: {}
+                });
+
+                const content = JSON.parse(result.content[0].text);
+                const container = document.getElementById('blockhash-info');
+                
+                container.innerHTML = `
+                    <div class="info-item">
+                        <span class="info-label">Blockhash:</span>
+                        <span class="info-value">${content.blockhash}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Timestamp:</span>
+                        <span class="info-value">${new Date(content.timestamp).toLocaleString()}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Status:</span>
+                        <span class="status connected">Valid</span>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('blockhash-info').innerHTML = `
+                    <div class="status error">Error: ${error.message}</div>
+                `;
+                showError(`Failed to get blockhash: ${error.message}`);
+            }
+        }
+
+        async function getBalance() {
+            const address = document.getElementById('balance-address').value.trim();
+            if (!address) {
+                showError('Please enter a Solana address');
+                return;
+            }
+
+            const container = document.getElementById('balance-info');
+            container.innerHTML = '<div class="loading">Loading balance...</div>';
+
+            try {
+                const result = await callMCPServer('tools/call', {
+                    name: 'get_balance',
+                    arguments: { address: address }
+                });
+
+                const content = JSON.parse(result.content[0].text);
+                
+                container.innerHTML = `
+                    <div class="info-item">
+                        <span class="info-label">Address:</span>
+                        <span class="info-value">${content.address.substring(0, 20)}...</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Balance:</span>
+                        <span class="info-value balance-value">${content.balance} SOL</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Lamports:</span>
+                        <span class="info-value">${content.lamports.toLocaleString()}</span>
+                    </div>
+                `;
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="status error">Error: ${error.message}</div>
+                `;
+                showError(`Failed to get balance: ${error.message}`);
+            }
+        }
+
+        async function getAccountInfo() {
+            const address = document.getElementById('account-address').value.trim();
+            if (!address) {
+                showError('Please enter a Solana address');
+                return;
+            }
+
+            const container = document.getElementById('account-info');
+            container.innerHTML = '<div class="loading">Loading account info...</div>';
+
+            try {
+                const result = await callMCPServer('tools/call', {
+                    name: 'get_account_info',
+                    arguments: { address: address }
+                });
+
+                const content = JSON.parse(result.content[0].text);
+                
+                if (content.error) {
+                    container.innerHTML = `
+                        <div class="status error">Account not found</div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = `
+                    <div class="info-item">
+                        <span class="info-label">Address:</span>
+                        <span class="info-value">${content.address.substring(0, 20)}...</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Lamports:</span>
+                        <span class="info-value">${content.lamports.toLocaleString()}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Owner:</span>
+                        <span class="info-value">${content.owner.substring(0, 20)}...</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Executable:</span>
+                        <span class="info-value">${content.executable ? 'Yes' : 'No'}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Rent Epoch:</span>
+                        <span class="info-value">${content.rentEpoch}</span>
+                    </div>
+                `;
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="status error">Error: ${error.message}</div>
+                `;
+                showError(`Failed to get account info: ${error.message}`);
+            }
+        }
+
+        function refreshAllData() {
+            getNetworkInfo();
+            getSlotInfo();
+            getBlockhashInfo();
+        }
+
+        // Auto-refresh slot and blockhash every 10 seconds
+        setInterval(() => {
+            getSlotInfo();
+            getBlockhashInfo();
+        }, 10000);
+
+        // Load initial data
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshAllData();
+        });
+
+        // Handle Enter key in input fields
+        document.getElementById('balance-address').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') getBalance();
+        });
+
+        document.getElementById('account-address').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') getAccountInfo();
+        });
+    </script>
+</body>
+</html> 

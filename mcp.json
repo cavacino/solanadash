@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "solana-mcp-server": {
+      "command": "node",
+      "args": ["server.js"],
+      "cwd": "C:\\Users\\family\\Desktop\\SOCNew Site",
+      "env": {
+        "PORT": "3000"
+      }
+    }
+  }
+} 

@@ -1,0 +1,17 @@
+{
+  "name": "solana-mcp-server",
+  "version": "1.0.0",
+  "description": "A Solana MCP server for Cursor integration",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.29.0",
+    "@solana/web3.js": "^1.87.6"
+  },
+  "keywords": ["solana", "mcp", "cursor", "blockchain"],
+  "author": "",
+  "license": "MIT"
+} 
