@@ -257,14 +257,14 @@
             <p>Real-time Solana network information and account data</p>
         </div>
 
-        <div id="server-status" class="server-status disconnected">
-            🔴 Connecting to MCP Server...
-        </div>
-
         <div class="server-config">
             <strong>MCP Server URL:</strong>
             <input type="text" id="server-url" placeholder="Enter MCP server URL" value="http://localhost:3000">
             <button class="query-btn" onclick="updateServerUrl()" style="margin-top: 10px;">Update Server</button>
+        </div>
+
+        <div id="server-status" class="server-status disconnected">
+            🔴 Connecting to MCP Server...
         </div>
 
         <button class="refresh-btn" onclick="refreshAllData()">🔄 Refresh All Data</button>
@@ -336,7 +336,7 @@
     </div>
 
     <script>
-        let MCP_SERVER_URL = 'http://localhost:3000';
+        let MCP_SERVER_URL = 'https://solanadash.vercel.app';
         let requestId = 1;
 
         // Try to get server URL from environment or localStorage
